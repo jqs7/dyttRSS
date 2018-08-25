@@ -6,6 +6,9 @@ import (
 	"github.com/gorilla/feeds"
 	"github.com/levigross/grequests"
 	"github.com/tuotoo/biu"
+	"github.com/tuotoo/biu/box"
+	"github.com/tuotoo/biu/log"
+	"github.com/tuotoo/biu/opt"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )
@@ -13,25 +16,25 @@ import (
 type DYTT struct{}
 
 func (ctl DYTT) WebService(ws biu.WS) {
-	ws.Route(ws.GET("rss.xml"), &biu.RouteOpt{
-		ID: "dytt.rss",
-		To: ctl.rss,
-		Errors: map[int]string{
+	ws.Route(ws.GET("rss.xml"),
+		opt.RouteID("dytt.rss"),
+		opt.RouteTo(ctl.rss),
+		opt.RouteErrors(map[int]string{
 			100: "请求电影页面失败",
 			101: "获取页面结构失败",
 			102: "RSS 输出失败",
-		},
-	})
+		}),
+	)
 }
 
-func (ctl DYTT) rss(ctx biu.Ctx) {
+func (ctl DYTT) rss(ctx box.Ctx) {
 	host := "https://www.dy2018.com"
 	resp, err := grequests.Get(host+"/html/gndy/dyzz/index.html", nil)
 	ctx.Must(err, 100)
 	defer func() {
 		err := resp.Close()
 		if err != nil {
-			biu.Info().Err(err).Msg("close resp")
+			log.Info().Err(err).Msg("close resp")
 		}
 	}()
 
@@ -66,7 +69,7 @@ func (ctl DYTT) rss(ctx biu.Ctx) {
 }
 
 func main() {
-	biu.UseColorLogger()
+	log.UseColorLogger()
 	restful.Filter(biu.LogFilter())
 	biu.AddServices("/v1", nil,
 		biu.NS{
@@ -80,5 +83,5 @@ func main() {
 		RoutePrefix: "/v1",
 	})
 	restful.Add(swaggerService)
-	biu.Run(":7096", nil)
+	biu.Run(":7096")
 }
